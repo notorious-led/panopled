@@ -1,3 +1,5 @@
+from rf300pwm import *
+
 INPUT = False
 OUTPUT = True
 HIGH = True
@@ -7,32 +9,44 @@ NV_GROUP = 129
 NV_GROUP_INTEREST_MASK_ID = 5
 NV_GROUP_FORWARDING_MASK_ID = 6
 
-PIN_RED = 10
-PIN_GREEN = 11
-PIN_BLUE = 12
+PIN_RED = 0
+PIN_GREEN = 1
+PIN_BLUE = 2
 
 my_group = None
 my_unit = None
 sleep_mode = False
-counter = 0
+counter = 1000 #skip first blink
 counter_max = 10000
 current_effect = 0
+
+current_r = 102
+current_g = 47
+current_b = 142
+last_r = 0
+last_g = 0
+last_b = 0
 
 @setHook(HOOK_STARTUP)
 def init():
     setPinDir(PIN_RED, OUTPUT)
-    writePin(PIN_RED, LOW)
     setPinDir(PIN_GREEN, OUTPUT)
-    writePin(PIN_GREEN, LOW)
     setPinDir(PIN_BLUE, OUTPUT)
+    writePin(PIN_RED, LOW)
+    writePin(PIN_GREEN, LOW)
     writePin(PIN_BLUE, LOW)
 
-    set_color(255, 0, 0) #while we boot.
+    initTimer0_8bit()
+    Init_PWM_GPIO(PIN_RED)
+    Init_PWM_GPIO(PIN_GREEN)
+    Init_PWM_GPIO(PIN_BLUE)
+
+    write_color(255, 0, 0) #while we boot.
 
     set_group(loadNvParam(NV_GROUP))
     set_unit(loadNvParam(NV_UNIT))
 
-    set_color(0, 0, 0)
+    write_color(0, 0, 0)
 
 @setHook(HOOK_10MS)
 def hook_10ms():
@@ -82,14 +96,13 @@ def set_group_and_unit(x, y):
 def set_sleep_mode(b):
     global sleep_mode
     sleep_mode = b
-    set_color(0, 0, 0)
+    write_color(0, 0, 0)
 
 
-def set_color(r, g, b):
-    #Stub version that only supports on/off
-    writePin(PIN_RED, r > 0)
-    writePin(PIN_GREEN, g > 0)
-    writePin(PIN_BLUE, b > 0)
+def write_color(r, g, b):
+    SetDutyCycle(PIN_RED, 255-r)
+    SetDutyCycle(PIN_GREEN, 255-g)
+    SetDutyCycle(PIN_BLUE, 255-b)
 
 def set_current_effect(e):
     global current_effect
@@ -106,11 +119,19 @@ def set_counter_max(n):
 def run_effect(effect):
     if effect == 0:
         """Blink"""
-        if counter == 0:
-            pulsePin(PIN_GREEN, 25, True)
+        if counter <= 25:
+            write_color(0, 32, 0) #pulsePin(PIN_GREEN, 25, True)
+        else:
+            write_color(0, 0, 0)
     elif effect == 1:
         """BlinkSync"""
         if counter >= counter_max:
             mcastRpc(my_group, 1, "set_counter", 0)
-        if counter <= 25:
-            pulsePin(PIN_GREEN, 25, True) 
+        run_effect(0) #Blink
+    elif effect == 2:
+        """Drip"""
+        if counter < 100:
+            write_color(current_r, current_g, current_b)
+        else:
+            write_color(current_r / (counter*100), current_g / (counter*100), current_b / (counter*100))
+
