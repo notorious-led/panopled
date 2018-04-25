@@ -59,9 +59,10 @@ def hook_1s():
 
 def set_group(x):
     global my_group
-    x = x | 1 #ALWAYS subscribe to the broadcast group
     my_group = x
     saveNvParam(NV_GROUP, x)
+
+    x = x | 1 #ALWAYS subscribe to the broadcast group
     saveNvParam(NV_GROUP_INTEREST_MASK_ID, x)
     saveNvParam(NV_GROUP_FORWARDING_MASK_ID, x)
 def get_group():
@@ -94,8 +95,18 @@ def set_effect(e):
     global effect
     effect = e
 
+def set_counter(n):
+    global counter
+    counter = n
+    run_effects()
+
 def run_effects():
     if effect == 0:
         if counter == 0:
             pulsePin(PIN_GREEN, 25, True)
-
+    elif effect == 1:
+        if counter == 0:
+            mcastRpc(my_group, 1, set_counter, 1)
+        if counter <= 1:
+            pulsePin(PIN_GREEN, 25, True)
+        
