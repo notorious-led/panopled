@@ -100,6 +100,10 @@ def set_sleep_mode(b):
 
 
 def write_color(r, g, b):
+    set_push_pull(PIN_RED, r>0)
+    set_push_pull(PIN_GREEN, g>0)
+    set_push_pull(PIN_BLUE, b>0)
+
     SetDutyCycle(PIN_RED, 255-r)
     SetDutyCycle(PIN_GREEN, 255-g)
     SetDutyCycle(PIN_BLUE, 255-b)
