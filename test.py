@@ -15,7 +15,7 @@ my_group = None
 my_unit = None
 sleep_mode = False
 counter = 0
-counter_max = 1000
+counter_max = 10000
 effect = 0
 
 @setHook(HOOK_STARTUP)
@@ -98,15 +98,19 @@ def set_effect(e):
 def set_counter(n):
     global counter
     counter = n
-    run_effects()
 
 def run_effects():
+    global effect, counter
+
     if effect == 0:
         if counter == 0:
             pulsePin(PIN_GREEN, 25, True)
     elif effect == 1:
-        if counter == 0:
-            mcastRpc(my_group, 1, set_counter, 1)
-        if counter <= 1:
+        if counter >= 1000:
+            mcastRpc(my_group, 1, "set_counter", 1)
+            counter = 3
+        if counter <= 15:
             pulsePin(PIN_GREEN, 25, True)
+    else:
+        effect = 0
         
