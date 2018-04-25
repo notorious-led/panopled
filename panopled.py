@@ -7,9 +7,9 @@ NV_GROUP = 129
 NV_GROUP_INTEREST_MASK_ID = 5
 NV_GROUP_FORWARDING_MASK_ID = 6
 
-PIN_RED = 0
-PIN_GREEN = 1
-PIN_BLUE = 2
+PIN_RED = 10
+PIN_GREEN = 11
+PIN_BLUE = 12
 
 my_group = None
 my_unit = None
@@ -103,6 +103,7 @@ def run_effects():
     global effect, counter
 
     if effect == 0:
+        """Blink"""
         if counter == 0:
             pulsePin(PIN_GREEN, 25, True)
     elif effect == 1:
