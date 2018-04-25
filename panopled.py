@@ -16,7 +16,7 @@ my_unit = None
 sleep_mode = False
 counter = 0
 counter_max = 10000
-effect = 0
+current_effect = 0
 
 @setHook(HOOK_STARTUP)
 def init():
@@ -38,13 +38,13 @@ def init():
 def hook_10ms():
     global counter
 
-    if counter > counter_max:
+    if not sleep_mode:
+        run_effect(current_effect)
+
+    if counter >= counter_max:
         counter = 0
     else:
         counter += 10
-
-    if not sleep_mode:
-        run_effects()
 
 @setHook(HOOK_1S)
 def hook_1s():
@@ -91,27 +91,26 @@ def set_color(r, g, b):
     writePin(PIN_GREEN, g > 0)
     writePin(PIN_BLUE, b > 0)
 
-def set_effect(e):
-    global effect
-    effect = e
+def set_current_effect(e):
+    global current_effect
+    current_effect = e
 
 def set_counter(n):
     global counter
     counter = n
 
-def run_effects():
-    global effect, counter
+def set_counter_max(n):
+    global counter_max
+    counter_max = n
 
+def run_effect(effect):
     if effect == 0:
         """Blink"""
         if counter == 0:
             pulsePin(PIN_GREEN, 25, True)
     elif effect == 1:
-        if counter >= 1000:
-            mcastRpc(my_group, 1, "set_counter", 1)
-            counter = 3
-        if counter <= 15:
-            pulsePin(PIN_GREEN, 25, True)
-    else:
-        effect = 0
-        
+        """BlinkSync"""
+        if counter >= counter_max:
+            mcastRpc(my_group, 1, "set_counter", 0)
+        if counter <= 25:
+            pulsePin(PIN_GREEN, 25, True) 
