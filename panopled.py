@@ -16,16 +16,20 @@ PIN_BLUE = 2
 my_group = None
 my_unit = None
 sleep_mode = False
-counter = 1000 #skip first blink
-counter_max = 10000
 current_effect = 0
+last_ms = 0
 
 current_r = 102
 current_g = 47
 current_b = 142
-last_r = 0
-last_g = 0
-last_b = 0
+last_written_r = -1
+last_written_g = -1
+last_written_b = -1
+
+def max(a, b):
+    if a > b:
+        return a
+    return b
 
 @setHook(HOOK_STARTUP)
 def init():
@@ -48,17 +52,11 @@ def init():
 
     write_color(0, 0, 0)
 
-@setHook(HOOK_10MS)
-def hook_10ms():
-    global counter
-
+@setHook(HOOK_100MS)
+def main_loop():
     if not sleep_mode:
         run_effect(current_effect)
 
-    if counter >= counter_max:
-        counter = 0
-    else:
-        counter += 10
 
 @setHook(HOOK_1S)
 def hook_1s():
@@ -100,42 +98,45 @@ def set_sleep_mode(b):
 
 
 def write_color(r, g, b):
-    set_push_pull(PIN_RED, r>0)
-    set_push_pull(PIN_GREEN, g>0)
-    set_push_pull(PIN_BLUE, b>0)
+    global last_written_r, last_written_g, last_written_b
 
-    SetDutyCycle(PIN_RED, 255-r)
-    SetDutyCycle(PIN_GREEN, 255-g)
-    SetDutyCycle(PIN_BLUE, 255-b)
+    if r != last_written_r:
+        if r == 0 or last_written_r == 0:
+            set_push_pull(PIN_RED, r>0)
+        SetDutyCycle(PIN_RED, 255-r)
+        last_written_r = r
+
+    if g != last_written_g:
+        if g == 0 or last_written_g == 0:
+            set_push_pull(PIN_GREEN, g>0)
+        SetDutyCycle(PIN_GREEN, 255-g)
+        last_written_g = g
+
+    if b != last_written_b:
+        if b == 0 or last_written_b == 0:
+            set_push_pull(PIN_BLUE, b>0)
+        SetDutyCycle(PIN_BLUE, 255-b)
+        last_written_b = b
 
 def set_current_effect(e):
     global current_effect
     current_effect = e
 
-def set_counter(n):
-    global counter
-    counter = n
-
-def set_counter_max(n):
-    global counter_max
-    counter_max = n
-
 def run_effect(effect):
+    global current_r, current_g, current_b, last_ms
     if effect == 0:
-        """Blink"""
-        if counter <= 25:
-            write_color(0, 32, 0) #pulsePin(PIN_GREEN, 25, True)
+        if getMs() - last_ms > 10000:
+            write_color(0, 32, 0)
+            last_ms = getMs()
         else:
             write_color(0, 0, 0)
     elif effect == 1:
-        """BlinkSync"""
-        if counter >= counter_max:
-            mcastRpc(my_group, 1, "set_counter", 0)
-        run_effect(0) #Blink
-    elif effect == 2:
-        """Drip"""
-        if counter < 100:
-            write_color(current_r, current_g, current_b)
-        else:
-            write_color(current_r / (counter*100), current_g / (counter*100), current_b / (counter*100))
+        current_r += 10
+        current_g += 10
+        current_b += 10
+        if current_r > 255: current_r = 0
+        if current_g > 255: current_g = 0
+        if current_b > 255: current_b = 0
+
+        write_color(current_r, current_g, current_b)
 
