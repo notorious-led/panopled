@@ -17,7 +17,9 @@ my_group = None
 my_unit = None
 sleep_mode = False
 current_effect = 0
-last_ms = 0
+
+state_last_ms = 0
+state_counter_max = 5000
 
 current_r = 102
 current_g = 47
@@ -122,15 +124,30 @@ def set_current_effect(e):
     global current_effect
     current_effect = e
 
+
+def set_last_ms(offset=0):
+    global state_last_ms
+    state_last_ms = getMs() + offset
+def set_counter_max(x):
+    global state_counter_max
+    state_counter_max = x
+
 def run_effect(effect):
-    global current_r, current_g, current_b, last_ms
+    global current_r, current_g, current_b, state_last_ms
     if effect == 0:
-        if getMs() - last_ms > 10000:
-            write_color(0, 32, 0)
-            last_ms = getMs()
+        """Pilot light"""
+        if getMs() - state_last_ms > state_counter_max:
+            write_color(current_r, current_g, current_b)
+            set_last_ms()
         else:
             write_color(0, 0, 0)
     elif effect == 1:
+        """BlinkSync"""
+        if getMs() - state_last_ms > state_counter_max:
+            mcastRpc(my_group, 1, "set_last_ms", -25)
+        run_effect(0)
+    elif effect == 2:
+        """Confettoply"""
         current_r += 10
         current_g += 10
         current_b += 10
