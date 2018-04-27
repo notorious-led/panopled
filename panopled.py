@@ -6,6 +6,7 @@ HIGH = True
 LOW = False
 NV_UNIT = 128
 NV_GROUP = 129
+NV_GROUP_SIZE = 130
 NV_GROUP_INTEREST_MASK_ID = 5
 NV_GROUP_FORWARDING_MASK_ID = 6
 
@@ -15,6 +16,7 @@ PIN_BLUE = 2
 PIN_NOTHING = 3
 
 my_group = None
+my_group_size = 32
 my_unit = None
 sleep_mode = False
 current_effect = 0
@@ -22,6 +24,7 @@ current_effect = 0
 state_last_ms = 0
 state_counter_max = 5000
 state_my_turn = False
+state_rainbow = 0
 
 set_r = 102
 set_g = 47
@@ -52,9 +55,9 @@ def init():
     Init_PWM_GPIO(PIN_GREEN)
     Init_PWM_GPIO(PIN_BLUE)
 
-    write_color(255, 0, 0) #while we boot.
+    write_color(100, 0, 0) #while we boot.
 
-    set_group(loadNvParam(NV_GROUP))
+    set_group(loadNvParam(NV_GROUP), loadNvParam(NV_GROUP_SIZE))
     set_unit(loadNvParam(NV_UNIT))
 
     write_color(0, 0, 0)
@@ -89,10 +92,12 @@ def hook_1s():
         sleep(0, 15) #seconds
 
 
-def set_group(x):
-    global my_group
+def set_group(x, size=32):
+    global my_group, my_group_size
     my_group = x
+    my_group_size = size
     saveNvParam(NV_GROUP, x)
+    saveNvParam(NV_GROUP_SIZE, size)
 
     x = x | 1 #ALWAYS subscribe to the broadcast group
     saveNvParam(NV_GROUP_INTEREST_MASK_ID, x)
@@ -149,6 +154,7 @@ def set_last_ms(offset=0):
 def shuffle():
     set_last_ms(getMs() - random())
     pulsePin(PIN_NOTHING, random())
+    set_color(random() % 255, random() % 255, random() % 255)
 def set_counter_max(x):
     global state_counter_max
     state_counter_max = x
@@ -157,8 +163,39 @@ def trip_color():
     current_r, current_g, current_b = set_r, set_g, set_b
 def set_color(r, g, b):
     global set_r, set_g, set_b, current_r, current_g, current_b
-    set_r, set_g, set_b = r, g, b
+
+    set_r, set_g, set_b = r%255, g%255, b%255
     trip_color()
+def reset_rainbow(offset=50):
+    global state_rainbow
+    state_rainbow = 0 + ( my_unit * offset )
+def next_color_in_rainbow():
+    global state_rainbow, current_r, current_g, current_b
+    
+    if state_rainbow >= 1536:
+        state_rainbow = 0
+    else:
+        state_rainbow += 10
+
+    if state_rainbow < 256:
+        current_b = 255 - (state_rainbow % 256)
+        current_r = 255
+    elif state_rainbow < 512:
+        current_r = 255
+        current_g = state_rainbow % 256
+    elif state_rainbow < 768:
+        current_r = 255 - (state_rainbow % 256)
+        current_g = 255
+    elif state_rainbow < 1024:
+        current_g = 255
+        current_b = state_rainbow % 256
+    elif state_rainbow < 1280:
+        current_g = 255 - (state_rainbow % 256)
+        current_b = 255
+    elif state_rainbow < 1536:
+        current_b = 255
+        current_r = state_rainbow % 256
+
 
 def set_my_turn(unit):
     global state_my_turn
@@ -207,12 +244,22 @@ def run_effect(effect):
         run_effect(11)
         
         if state_my_turn:
-            write_color(set_r, set_g, set_b)
+            trip_color()
             state_my_turn = False
-            mcastRpc(my_group, 1, "set_my_turn", my_unit+1)
+
+            friend = my_unit+1
+            if friend > my_group_size:
+                friend = 1
+            
+            mcastRpc(my_group, 1, "set_my_turn", friend)
             set_last_ms()
         
         if getMs() - state_last_ms > state_counter_max:
             state_my_turn = True
             set_last_ms()
+
+    elif effect == 13:
+        """Rainbow"""
+        next_color_in_rainbow()
+        write_color(current_r, current_g, current_b)
 
