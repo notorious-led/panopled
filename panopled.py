@@ -12,6 +12,7 @@ NV_GROUP_FORWARDING_MASK_ID = 6
 PIN_RED = 0
 PIN_GREEN = 1
 PIN_BLUE = 2
+PIN_NOTHING = 3
 
 my_group = None
 my_unit = None
@@ -20,10 +21,11 @@ current_effect = 0
 
 state_last_ms = 0
 state_counter_max = 5000
+state_my_turn = False
 
-#current_r = 102
-#current_g = 47
-#current_b = 142
+set_r = 102
+set_g = 47
+set_b = 142
 current_r = 0
 current_g = 32
 current_b = 0
@@ -144,15 +146,27 @@ def set_current_effect(e):
 def set_last_ms(offset=0):
     global state_last_ms
     state_last_ms = getMs() + offset
+def shuffle():
+    set_last_ms(getMs() - random())
+    pulsePin(PIN_NOTHING, random())
 def set_counter_max(x):
     global state_counter_max
     state_counter_max = x
-def set_color(r, g, b):
+def trip_color():
     global current_r, current_g, current_b
-    current_r, current_g, current_b = r, g, b
+    current_r, current_g, current_b = set_r, set_g, set_b
+def set_color(r, g, b):
+    global set_r, set_g, set_b, current_r, current_g, current_b
+    set_r, set_g, set_b = r, g, b
+    trip_color()
+
+def set_my_turn(unit):
+    global state_my_turn
+    if my_unit == unit:
+        state_my_turn = True
 
 def run_effect(effect):
-    global current_r, current_g, current_b, state_last_ms
+    global current_r, current_g, current_b, state_last_ms, state_my_turn
     if effect == 0:
         """Pilot light"""
         if getMs() - state_last_ms > state_counter_max:
@@ -173,15 +187,32 @@ def run_effect(effect):
             write_color(0, 0, 0)
     elif effect == 10:
         """Confettoply"""
+        run_effect(11)
+        if current_r <= 0: current_r = 200
+        if current_g <= 0: current_g = 200
+        if current_b <= 0: current_b = 200
+
+    elif effect == 11:
+        """Fade Out"""
         current_r -= 10
         current_g -= 10
         current_b -= 10
-        if current_r < 0: current_r = 200
-        if current_g < 0: current_g = 200
-        if current_b < 0: current_b = 200
-
+        if current_r < 0: current_r = 0
+        if current_g < 0: current_g = 0
+        if current_b < 0: current_b = 0
         write_color(current_r, current_g, current_b)
-    elif effect == 11:
+
+    elif effect == 12:
         """Chase"""
-        pass
+        run_effect(11)
+        
+        if state_my_turn:
+            write_color(set_r, set_g, set_b)
+            state_my_turn = False
+            mcastRpc(my_group, 1, "set_my_turn", my_unit+1)
+            set_last_ms()
+        
+        if getMs() - state_last_ms > state_counter_max:
+            state_my_turn = True
+            set_last_ms()
 
