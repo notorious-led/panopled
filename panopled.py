@@ -21,9 +21,12 @@ current_effect = 0
 state_last_ms = 0
 state_counter_max = 5000
 
-current_r = 102
-current_g = 47
-current_b = 142
+#current_r = 102
+#current_g = 47
+#current_b = 142
+current_r = 0
+current_g = 32
+current_b = 0
 last_written_r = -1
 last_written_g = -1
 last_written_b = -1
@@ -62,10 +65,23 @@ def main_loop():
 
 @setHook(HOOK_1S)
 def hook_1s():
+    provisioning = False
+
     if my_group is None:
-        pulsePin(PIN_BLUE, 25, True)
+        provisioning = True
+        set_color(32, 0, 0)
     elif my_unit is None:
-        pulsePin(PIN_RED, 25, True)
+        provisioning = True
+        set_color(0, 0, 32)
+    
+    if provisioning:
+        if current_effect != 2:
+            set_current_effect(0) #pilot
+        set_counter_max(2000)
+    else:
+        if current_effect == 2:
+            set_current_effect(0)
+
     
     if sleep_mode:
         sleep(0, 15) #seconds
@@ -131,6 +147,9 @@ def set_last_ms(offset=0):
 def set_counter_max(x):
     global state_counter_max
     state_counter_max = x
+def set_color(r, g, b):
+    global current_r, current_g, current_b
+    current_r, current_g, current_b = r, g, b
 
 def run_effect(effect):
     global current_r, current_g, current_b, state_last_ms
@@ -143,17 +162,26 @@ def run_effect(effect):
             write_color(0, 0, 0)
     elif effect == 1:
         """BlinkSync"""
-        if getMs() - state_last_ms > state_counter_max:
-            mcastRpc(my_group, 1, "set_last_ms", -25)
+        if getMs() - state_last_ms > state_counter_max + 25:
+            mcastRpc(my_group, 1, "set_last_ms")
         run_effect(0)
     elif effect == 2:
+        """ID"""
+        if ( getMs() / 10 ) % 2 == 0:
+            write_color(128, 128, 128)
+        else:
+            write_color(0, 0, 0)
+    elif effect == 10:
         """Confettoply"""
-        current_r += 10
-        current_g += 10
-        current_b += 10
-        if current_r > 255: current_r = 0
-        if current_g > 255: current_g = 0
-        if current_b > 255: current_b = 0
+        current_r -= 10
+        current_g -= 10
+        current_b -= 10
+        if current_r < 0: current_r = 200
+        if current_g < 0: current_g = 200
+        if current_b < 0: current_b = 200
 
         write_color(current_r, current_g, current_b)
+    elif effect == 11:
+        """Chase"""
+        pass
 
