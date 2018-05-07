@@ -41,6 +41,10 @@ def max(a, b):
         return a
     return b
 
+def ping_unit(unit):
+    if unit == my_unit:
+        return True
+
 @setHook(HOOK_STARTUP)
 def init():
     setPinDir(PIN_RED, OUTPUT)
@@ -142,6 +146,10 @@ def write_color(r, g, b):
             set_push_pull(PIN_BLUE, b>0)
         SetDutyCycle(PIN_BLUE, 255-b)
         last_written_b = b
+
+def write_color_for_unit(unit, r, g, b):
+    if my_unit == unit:
+        write_color(r,g,b)
 
 def set_current_effect(e):
     global current_effect
