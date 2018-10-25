@@ -123,7 +123,8 @@ def set_group_and_unit(x, y):
 def set_sleep_mode(b):
     global sleep_mode
     sleep_mode = b
-    write_color(0, 0, 0)
+    if b:
+        write_color(0, 0, 0)
 
 
 def write_color(r, g, b):
