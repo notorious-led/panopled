@@ -1,4 +1,15 @@
-from rf300pwm import *
+NUM_PIXELS = 16
+
+TRIG_PIN = 6 #1
+ENABLE_5V_PIN = 5 #2
+PIN_NOTHING = -1
+
+RED = "\x00\x00\xff"
+BLUE = "\xff\x00\x00"
+GREEN = "\x00\xff\x00"
+MAGENTA = "\x50\x00\x50"
+OFF = "\x00\x00\x00"
+DEFAULT_BRIGHTNESS = chr(31)
 
 INPUT = False
 OUTPUT = True
@@ -9,11 +20,6 @@ NV_GROUP = 129
 NV_GROUP_SIZE = 130
 NV_GROUP_INTEREST_MASK_ID = 5
 NV_GROUP_FORWARDING_MASK_ID = 6
-
-PIN_RED = 0
-PIN_GREEN = 1
-PIN_BLUE = 2
-PIN_NOTHING = 3
 
 my_group = None
 my_group_size = 32
@@ -47,17 +53,10 @@ def ping_unit(unit):
 
 @setHook(HOOK_STARTUP)
 def init():
-    setPinDir(PIN_RED, OUTPUT)
-    setPinDir(PIN_GREEN, OUTPUT)
-    setPinDir(PIN_BLUE, OUTPUT)
-    writePin(PIN_RED, LOW)
-    writePin(PIN_GREEN, LOW)
-    writePin(PIN_BLUE, LOW)
-
-    initTimer0_8bit()
-    Init_PWM_GPIO(PIN_RED)
-    Init_PWM_GPIO(PIN_GREEN)
-    Init_PWM_GPIO(PIN_BLUE)
+    #INIT LEDS HERE
+    disable_5v()
+    init_spi()
+    enable_5v()
 
     write_color(100, 0, 0) #while we boot.
 
@@ -125,28 +124,17 @@ def set_sleep_mode(b):
     sleep_mode = b
     if b:
         write_color(0, 0, 0)
+        disable_5v()
+    else:
+        enable_5v()
 
 
 def write_color(r, g, b):
     global last_written_r, last_written_g, last_written_b
 
-    if r != last_written_r:
-        if r == 0 or last_written_r == 0:
-            set_push_pull(PIN_RED, r>0)
-        SetDutyCycle(PIN_RED, 255-r)
-        last_written_r = r
-
-    if g != last_written_g:
-        if g == 0 or last_written_g == 0:
-            set_push_pull(PIN_GREEN, g>0)
-        SetDutyCycle(PIN_GREEN, 255-g)
-        last_written_g = g
-
-    if b != last_written_b:
-        if b == 0 or last_written_b == 0:
-            set_push_pull(PIN_BLUE, b>0)
-        SetDutyCycle(PIN_BLUE, 255-b)
-        last_written_b = b
+    if r != last_written_r or g != last_written_g or b != last_written_b:
+        #set_all(chr(r) + chr(g) + chr(b))
+        set_all(chr(b) + chr(g) + chr(r)) #For BGR APAs
 
 def write_color_for_unit(unit, r, g, b):
     if my_unit == unit:
@@ -271,4 +259,50 @@ def run_effect(effect):
         """Rainbow"""
         next_color_in_rainbow()
         write_color(current_r, current_g, current_b)
+
+    elif effect == 121:
+        """EggplanT"""
+        write_color(200, 0, 230)
+
+
+### TabLED stuff below this line ###
+
+def enable_5v():
+    '''Enable the 5V power supply for the LEDs.'''
+    setPinDir(ENABLE_5V_PIN, OUTPUT)
+    writePin(ENABLE_5V_PIN, HIGH)
+
+def disable_5v():
+    '''Disable the 5V power supply for the LEDs.'''
+    writePin(ENABLE_5V_PIN, LOW)
+    setPinDir(ENABLE_5V_PIN, INPUT)
+
+def init_spi():
+    '''Initialize the SPI port for the LEDs.'''
+    clock_polarity = False
+    clock_phase = False
+    is_msb_first = True
+    is_four_wire = True
+    spiInit(clock_polarity, clock_phase, is_msb_first, is_four_wire)
+
+def set_all(color):
+    '''Sets all of the LEDs to the same color.'''
+    color_string = ""
+    i = 0
+    while i < NUM_PIXELS:
+        color_string += color + DEFAULT_BRIGHTNESS
+        i += 1
+    return len(set_colors(color_string))
+
+def set_colors(color_string):
+    '''Sets the LEDs based on the colors provided in the color string.'''
+    led_data_string = ""
+    i = 0
+    while i < len(color_string) / 4:
+        led_data_string += chr(0b11100000 | ord(color_string[i*4+3]))
+        led_data_string += color_string[i*4:i*4+3]
+        i += 1
+    spiWrite("\x00\x00\x00\x00" + led_data_string + "\xff\xff\xff\xff")
+    return led_data_string
+
 
