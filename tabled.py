@@ -172,7 +172,7 @@ def next_color_in_rainbow():
     if state_rainbow >= 1536:
         state_rainbow = 0
     else:
-        state_rainbow += 10
+        state_rainbow += 2
 
     if state_rainbow < 256:
         current_b = 255 - (state_rainbow % 256)
@@ -239,6 +239,10 @@ def run_effect(effect):
     elif effect == 12:
         """Chase"""
         run_effect(11)
+        if current_r < 100:
+            current_r = 100
+            current_g = 0
+            current_b = 100
         
         if state_my_turn:
             trip_color()
