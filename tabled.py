@@ -18,6 +18,7 @@ LOW = False
 NV_UNIT = 128
 NV_GROUP = 129
 NV_GROUP_SIZE = 130
+NV_TEST_MODE = 131
 NV_GROUP_INTEREST_MASK_ID = 5
 NV_GROUP_FORWARDING_MASK_ID = 6
 
@@ -25,6 +26,7 @@ my_group = None
 my_group_size = 32
 my_unit = None
 sleep_mode = False
+test_mode = False
 current_effect = 0
 
 state_last_ms = 0
@@ -54,6 +56,8 @@ def ping_unit(unit):
 
 @setHook(HOOK_STARTUP)
 def init():
+    global test_mode
+
     #INIT LEDS HERE
     disable_5v()
     init_spi()
@@ -64,10 +68,15 @@ def init():
     set_group(loadNvParam(NV_GROUP), loadNvParam(NV_GROUP_SIZE))
     set_unit(loadNvParam(NV_UNIT))
 
+    test_mode = loadNvParam(NV_TEST_MODE)
+
     write_color(0, 0, 0)
 
 @setHook(HOOK_100MS)
 def main_loop():
+    if test_mode:
+        write_color(128,128,128)
+        return
     if not sleep_mode:
         run_effect(current_effect)
 
@@ -115,6 +124,12 @@ def set_unit(y):
     saveNvParam(NV_UNIT, y)
 def get_unit():
     return my_unit
+
+def set_test_mode(x):
+    saveNvParam(NV_TEST_MODE, x)
+    reboot()
+def get_test_mode(x):
+    return loadNvParam(NV_TEST_MODE)
 
 def set_group_and_unit(x, y):
     set_group(x)
