@@ -31,6 +31,7 @@ state_last_ms = 0
 state_counter_max = 5000
 state_my_turn = False
 state_rainbow = 0
+current_step = 0
 
 set_r = 102
 set_g = 47
@@ -200,7 +201,7 @@ def set_my_turn(unit):
         state_my_turn = True
 
 def run_effect(effect):
-    global current_r, current_g, current_b, state_last_ms, state_my_turn
+    global current_r, current_g, current_b, state_last_ms, state_my_turn, current_step
     if effect == 0:
         """Pilot light"""
         if getMs() - state_last_ms > state_counter_max:
@@ -264,9 +265,37 @@ def run_effect(effect):
         next_color_in_rainbow()
         write_color(current_r, current_g, current_b)
 
+    elif effect == 51:
+        """Rainbow Flow"""
+        current_step += 1
+        current_step %= 256
+        set_rainbow(current_step)
+
     elif effect == 121:
         """EggplanT"""
         write_color(200, 0, 230)
+
+### SPI LED effects ###
+def set_rainbow(offset):
+    color_string = ""
+    i = 0
+    while i < NUM_PIXELS:
+        color_string += get_rainbow_offset((i*256/NUM_PIXELS) + offset) + DEFAULT_BRIGHTNESS
+        i += 1
+    set_colors(color_string)
+
+def get_rainbow_offset(offset):
+    offset = offset % 256
+    if offset < 85:
+        return chr(255 - offset * 3) + chr(0) + chr(offset * 3)
+    elif offset < 170:
+        offset -= 85
+        return chr(0) + chr(offset * 3) + chr(255 - offset *3)
+    else:
+        offset -= 170
+        return chr(offset * 3) + chr(255 - offset * 3) + chr(0)
+
+
 
 
 ### TabLED stuff below this line ###
