@@ -6,6 +6,10 @@ echo -n "Bridge: "
 BRIDGE="$(snap node bridge info | grep address | cut -d ':' -f 6-8 | sed 's/://g')"
 echo "$BRIDGE"
 
+echo -n "TEMP: Setting all nodes to group 1, "
+snap rpc send multicast set_group 1
+snap rpc send multicast set_group 1 2>&1 > /dev/null
+
 echo "Finding nodes"
 NODES="$(snap rpc call multicast ffffff get_group 2>&1 | pv -l | grep --line-buffered "Received unexpected mcast" | awk '{print $NF}' | sort -u | xargs )"
 
