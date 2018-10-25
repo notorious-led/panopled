@@ -273,7 +273,8 @@ def run_effect(effect):
 
     elif effect == 121:
         """EggplanT"""
-        write_color(200, 0, 230)
+        set_color(200, 0, 230)
+        write_color(current_r, current_g, current_b)
 
 ### SPI LED effects ###
 def set_rainbow(offset):
