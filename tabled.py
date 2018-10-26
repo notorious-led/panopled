@@ -285,6 +285,11 @@ def run_effect(effect):
         current_step += 1
         current_step %= 256
         set_rainbow(current_step)
+    elif effect == 52:
+        """Eggplant Sparkle"""
+        current_step += 2
+        current_step %= 256
+        run_sparkle(current_step)
 
     elif effect == 121:
         """EggplanT"""
@@ -311,7 +316,35 @@ def get_rainbow_offset(offset):
         offset -= 170
         return chr(offset * 3) + chr(255 - offset * 3) + chr(0)
 
+def run_sparkle(offset):
+    color_string = ""
+    i = 0
+    #target_pixel = offset/16
+    target_pixel = random() % 16
 
+    target_brightness = offset % 16 #Values will go 0-15
+    target_brightness = target_brightness * 4 #now they go 0-60
+    if target_brightness > 28 and target_brightness < 37:
+        target_brightness = 31
+    if target_brightness > 32:
+        target_brightness = 32 - (target_brightness-32)
+    if target_brightness < 16:
+        target_brightness = 16
+
+
+    while i < NUM_PIXELS:
+        if i % 2 == 0:
+            color_string += chr(200) + chr(0) + chr(230) + chr(16)
+        elif i == target_pixel:
+            #color_string += chr(255) + chr(255) + chr(255) + chr(target_brightness)
+            #color_string += chr(255) + chr(255) + chr(255) + chr(target_brightness)
+            color_string += chr(200) + chr(0) + chr(230) + chr(target_brightness)
+            color_string += chr(200) + chr(0) + chr(230) + chr(target_brightness)
+            i += 1
+        else:
+            color_string += chr(200) + chr(0) + chr(230) + chr(4)
+        i += 1
+    set_colors(color_string)
 
 
 ### TabLED stuff below this line ###
